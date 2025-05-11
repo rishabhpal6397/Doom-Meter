@@ -17,3 +17,4 @@ Flask
 gunicorn
 dotenv
 flask_login
+certifi
