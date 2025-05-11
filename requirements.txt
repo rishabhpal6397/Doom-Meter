@@ -16,3 +16,4 @@ pycountry==23.12.11
 Flask
 gunicorn
 dotenv
+flask_login
