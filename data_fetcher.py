@@ -15,8 +15,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 def connect_to_mongodb():
     """Connect to MongoDB database"""
     try:
-        client = MongoClient(os.environ["MONGODB_URI"])
-        db = client[os.environ["MONGODB_DB"]]
+        uri = "mongodb+srv://rishavpal309:6397661626@personal01.gjqkp9c.mongodb.net/DisasterData?authSource=admin&retryWrites=true&w=majority&tls=true&appName=Personal01"
+
+        client = MongoClient(uri)
+        db = client["DisasterData"]
         return db
     except Exception as e:
         logging.error(f"Failed to connect to MongoDB: {e}")

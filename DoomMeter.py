@@ -32,7 +32,9 @@ login_manager.login_view = 'login'
 
 # Connect to MongoDB
 def get_db():
-    client = MongoClient(os.environ["MONGODB_URI"])
+    uri = "mongodb+srv://rishavpal309:6397661626@personal01.gjqkp9c.mongodb.net/DisasterData?authSource=admin&retryWrites=true&w=majority&tls=true&appName=Personal01"
+
+    client = MongoClient(uri)    
     return client[os.environ["MONGODB_DB"]]
 
 db = get_db()

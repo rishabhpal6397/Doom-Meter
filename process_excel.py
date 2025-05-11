@@ -15,8 +15,8 @@ def main():
     if "MONGODB_URI" not in os.environ or "MONGODB_DB" not in os.environ:
         logging.error("MongoDB environment variables not set")
         logging.info("Setting default MongoDB environment variables")
-        os.environ["MONGODB_URI"] = "mongodb://localhost:27017/"
-        os.environ["MONGODB_DB"] = "disaster_management"
+        os.environ["MONGODB_URI"] = "mongodb+srv://rishavpal309:<6397661626>@personal01.gjqkp9c.mongodb.net/?retryWrites=true&w=majority&appName=Personal01"
+        os.environ["MONGODB_DB"] = "DisasterData"
     
     # Process the Excel file
     result = fetch_emdat_data()
