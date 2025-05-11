@@ -13,3 +13,5 @@ requests==2.31.0
 beautifulsoup4==4.12.2
 geopy==2.4.1
 pycountry==23.12.11
+Flask
+gunicorn
