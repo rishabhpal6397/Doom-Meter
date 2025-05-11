@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Damage Assessment - Disaster Management System{% endblock %}
+{% block page_title %}Damage Assessment{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Create Damage Report</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('damage') }}">
+                    <div class="mb-3">
+                        <label for="damage_location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="damage_location" name="damage_location" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="damage_type" class="form-label">Disaster Type</label>
+                        <select class="form-select" id="damage_type" name="damage_type" required>
+                            <option value="Earthquake">Earthquake</option>
+                            <option value="Flood">Flood</option>
+                            <option value="Hurricane">Hurricane</option>
+                            <option value="Wildfire">Wildfire</option>
+                            <option value="Tsunami">Tsunami</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="damage_date" class="form-label">Date of Assessment</label>
+                        <input type="date" class="form-control" id="damage_date" name="damage_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="infrastructure_damage" class="form-label">Infrastructure Damage (%): <span id="damage_value">25</span>%</label>
+                        <input type="range" class="form-range" min="0" max="100" step="1" id="infrastructure_damage" name="infrastructure_damage" value="25" oninput="document.getElementById('damage_value').textContent = this.value">
+                    </div>
+                    <div class="mb-3">
+                        <label for="casualties" class="form-label">Estimated Casualties</label>
+                        <input type="number" class="form-control" id="casualties" name="casualties" min="0" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="economic_impact" class="form-label">Economic Impact ($ millions)</label>
+                        <input type="number" class="form-control" id="economic_impact" name="economic_impact" min="0" step="0.1" value="1.0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="damage_notes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="damage_notes" name="damage_notes" rows="3"></textarea>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-file-medical"></i> Submit Damage Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Damage Reports</h5>
+            </div>
+            <div class="card-body">
+                {% if reports %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Location</th>
+                                    <th>Disaster Type</th>
+                                    <th>Date</th>
+                                    <th>Infrastructure Damage</th>
+                                    <th>Casualties</th>
+                                    <th>Economic Impact</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for report in reports %}
+                                    <tr>
+                                        <td>{{ report.location }}</td>
+                                        <td>{{ report.disaster_type }}</td>
+                                        <td>{{ report.date }}</td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-{{ 'danger' if report.infrastructure_damage > 75 else 'warning' if report.infrastructure_damage > 50 else 'info' if report.infrastructure_damage > 25 else 'success' }}" 
+                                                     role="progressbar" 
+                                                     style="width: {{ report.infrastructure_damage }}%" 
+                                                     aria-valuenow="{{ report.infrastructure_damage }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">{{ report.infrastructure_damage }}%</div>
+                                            </div>
+                                        </td>
+                                        <td>{{ report.casualties }}</td>
+                                        <td>${{ report.economic_impact }} million</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center">No damage reports submitted yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if reports|length > 1 %}
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">Infrastructure Damage by Location</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="damageByLocationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">Economic Impact by Disaster Type</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="impactByTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if reports|length > 1 %}
+<script>
+    // Damage by location chart
+    var damageCtx = document.getElementById('damageByLocationChart').getContext('2d');
+    var damageChart = new Chart(damageCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for report in reports %}'{{ report.location }}',{% endfor %}],
+            datasets: [{
+                label: 'Infrastructure Damage (%)',
+                data: [{% for report in reports %}{{ report.infrastructure_damage }},{% endfor %}],
+                backgroundColor: [
+                    {% for report in reports %}
+                    '{{ 'rgba(220, 53, 69, 0.7)' if report.infrastructure_damage > 75 else 'rgba(255, 193, 7, 0.7)' if report.infrastructure_damage > 50 else 'rgba(23, 162, 184, 0.7)' if report.infrastructure_damage > 25 else 'rgba(40, 167, 69, 0.7)' }}',
+                    {% endfor %}
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+    
+    // Impact by type chart
+    var impactCtx = document.getElementById('impactByTypeChart').getContext('2d');
+    var impactChart = new Chart(impactCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for report in reports %}'{{ report.disaster_type }}',{% endfor %}],
+            datasets: [{
+                data: [{% for report in reports %}{{ report.economic_impact }},{% endfor %}],
+                backgroundColor: [
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(23, 162, 184, 0.7)',
+                    'rgba(40, 167, 69, 0.7)',
+                    'rgba(111, 66, 193, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

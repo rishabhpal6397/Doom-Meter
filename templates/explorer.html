@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+
+{% block title %}Data Explorer - Doom Meter{% endblock %}
+{% block page_title %}Disaster Data Explorer{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Filter Disaster Data</h5>
+            </div>
+            <div class="card-body">
+                <form id="filterForm" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="startYear" class="form-label">Start Year</label>
+                        <input type="number" class="form-control" id="startYear" min="{{ min_year }}" max="{{ max_year }}" value="{{ min_year }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="endYear" class="form-label">End Year</label>
+                        <input type="number" class="form-control" id="endYear" min="{{ min_year }}" max="{{ max_year }}" value="{{ max_year }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="disasterTypes" class="form-label">Disaster Types</label>
+                        <select class="form-select" id="disasterTypes" multiple size="1">
+                            <option value="all" selected>All Types</option>
+                            {% for type in disaster_types %}
+                                <option value="{{ type }}">{{ type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="regions" class="form-label">Regions</label>
+                        <select class="form-select" id="regions" multiple size="1">
+                            <option value="all" selected>All Regions</option>
+                            {% for region in regions %}
+                                <option value="{{ region }}">{{ region }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="button" class="btn btn-primary" id="applyFilters">
+                            <i class="fas fa-filter me-2"></i> Apply Filters
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="resetFilters">
+                            <i class="fas fa-undo me-2"></i> Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Yearly Disaster Trends</h5>
+            </div>
+            <div class="card-body">
+                <div id="yearlyChart" style="height: 400px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Disaster Types Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div id="typesChart" style="height: 400px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Disaster Data</h5>
+                <button class="btn btn-sm btn-success" id="exportData">
+                    <i class="fas fa-file-export me-1"></i> Export to CSV
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="disasterTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Year</th>
+                                <th>Type</th>
+                                <th>Country</th>
+                                <th>Region</th>
+                                <th>Deaths</th>
+                                <th>Economic Damage ($M)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="disasterTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading disaster data...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <span id="totalRecords">0</span> records found
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" id="prevPage" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span id="pageInfo">Page 1 of 1</span>
+                        <button class="btn btn-sm btn-outline-primary ms-2" id="nextPage" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Impact Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="deathsByTypeChart" style="height: 400px;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="damagesByTypeChart" style="height: 400px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Global variables
+    let currentPage = 1;
+    const pageSize = 10;
+    let totalPages = 1;
+    let allData = [];
+    
+    // Initialize on document load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Apply initial filters
+        applyFilters();
+        
+        // Set up event listeners
+        document.getElementById('applyFilters').addEventListener('click', applyFilters);
+        document.getElementById('resetFilters').addEventListener('click', resetFilters);
+        document.getElementById('prevPage').addEventListener('click', goToPrevPage);
+        document.getElementById('nextPage').addEventListener('click', goToNextPage);
+        document.getElementById('exportData').addEventListener('click', exportToCSV);
+    });
+    
+    // Apply filters and fetch data
+    function applyFilters() {
+        const startYear = document.getElementById('startYear').value;
+        const endYear = document.getElementById('endYear').value;
+        
+        // Get selected disaster types
+        const disasterTypesSelect = document.getElementById('disasterTypes');
+        const selectedTypes = Array.from(disasterTypesSelect.selectedOptions)
+            .map(option => option.value)
+            .filter(value => value !== 'all');
+        
+        // Get selected regions
+        const regionsSelect = document.getElementById('regions');
+        const selectedRegions = Array.from(regionsSelect.selectedOptions)
+            .map(option => option.value)
+            .filter(value => value !== 'all');
+        
+        // Show loading state
+        document.getElementById('disasterTableBody').innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading disaster data...</p>
+                </td>
+            </tr>
+        `;
+        
+        // Build query parameters
+        const params = new URLSearchParams();
+        params.append('start_year', startYear);
+        params.append('end_year', endYear);
+        
+        if (selectedTypes.length > 0) {
+            selectedTypes.forEach(type => params.append('disaster_types[]', type));
+        }
+        
+        if (selectedRegions.length > 0) {
+            selectedRegions.forEach(region => params.append('regions[]', region));
+        }
+        
+        // Fetch data
+        fetch(`/api/explorer/data?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                allData = data;
+                totalPages = Math.ceil(data.length / pageSize);
+                currentPage = 1;
+                
+                // Update UI
+                updateTable();
+                updatePagination();
+                document.getElementById('totalRecords').textContent = data.length;
+                
+                // Fetch and update charts
+                fetchYearlyCounts(params);
+                fetchTypeCounts(params);
+                fetchImpactByType(params);
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                document.getElementById('disasterTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-danger">
+                            <i class="fas fa-exclamation-circle fa-2x mb-3"></i>
+                            <p>Error loading data. Please try again.</p>
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+    
+    // Reset filters to default values
+    function resetFilters() {
+        document.getElementById('startYear').value = {{ min_year | default(2000) | tojson}};
+        document.getElementById('endYear').value = {{ max_year | default(2023) | tojson}};
+        
+        const disasterTypesSelect = document.getElementById('disasterTypes');
+        const regionsSelect = document.getElementById('regions');
+        
+        // Reset selections
+        for (let i = 0; i < disasterTypesSelect.options.length; i++) {
+            disasterTypesSelect.options[i].selected = (i === 0); // Select only "All Types"
+        }
+        
+        for (let i = 0; i < regionsSelect.options.length; i++) {
+            regionsSelect.options[i].selected = (i === 0); // Select only "All Regions"
+        }
+        
+        // Apply filters with reset values
+        applyFilters();
+    }
+    
+    // Update table with current page data
+    function updateTable() {
+        const tableBody = document.getElementById('disasterTableBody');
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, allData.length);
+        
+        if (allData.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">
+                        <i class="fas fa-info-circle fa-2x mb-3 text-info"></i>
+                        <p>No data found matching your criteria.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        let html = '';
+        for (let i = startIndex; i < endIndex; i++) {
+            const disaster = allData[i];
+            html += `
+                <tr>
+                    <td>${disaster.year || 'N/A'}</td>
+                    <td>${disaster.disaster_type || disaster.disaster_group || 'N/A'}</td>
+                    <td>${disaster.country || 'N/A'}</td>
+                    <td>${disaster.region || 'N/A'}</td>
+                    <td>${disaster.deaths || 0}</td>
+                    <td>${disaster.total_damages ? disaster.total_damages.toFixed(2) : '0.00'}</td>
+                </tr>
+            `;
+        }
+        
+        tableBody.innerHTML = html;
+    }
+    
+    // Update pagination controls
+    function updatePagination() {
+        document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+        document.getElementById('prevPage').disabled = currentPage <= 1;
+        document.getElementById('nextPage').disabled = currentPage >= totalPages;
+    }
+    
+    // Go to previous page
+    function goToPrevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            updateTable();
+            updatePagination();
+        }
+    }
+    
+    // Go to next page
+    function goToNextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            updateTable();
+            updatePagination();
+        }
+    }
+    
+    // Export data to CSV
+    function exportToCSV() {
+        if (allData.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+        
+        // Create CSV content
+        const headers = ['Year', 'Type', 'Country', 'Region', 'Deaths', 'Economic Damage ($M)'];
+        let csvContent = headers.join(',') + '\n';
+        
+        allData.forEach(disaster => {
+            const row = [
+                disaster.year || '',
+                (disaster.disaster_type || disaster.disaster_group || '').replace(/,/g, ';'),
+                (disaster.country || '').replace(/,/g, ';'),
+                (disaster.region || '').replace(/,/g, ';'),
+                disaster.deaths || 0,
+                disaster.total_damages ? disaster.total_damages.toFixed(2) : '0.00'
+            ];
+            csvContent += row.join(',') + '\n';
+        });
+        
+        // Create download link
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'disaster_data.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    
+    // Fetch yearly disaster counts
+    function fetchYearlyCounts(params) {
+        fetch(`/api/explorer/yearly-counts?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                // Create yearly trend chart
+                const years = data.map(item => item.year);
+                const counts = data.map(item => item.count);
+                
+                Plotly.newPlot('yearlyChart', [{
+                    x: years,
+                    y: counts,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    marker: {
+                        color: '#1a5f7a',
+                        size: 8
+                    },
+                    line: {
+                        color: '#1a5f7a',
+                        width: 3
+                    }
+                }], {
+                    margin: { t: 10, r: 10, l: 50, b: 50 },
+                    xaxis: {
+                        title: 'Year'
+                    },
+                    yaxis: {
+                        title: 'Number of Disasters'
+                    }
+                });
+            })
+            .catch(error => console.error('Error fetching yearly counts:', error));
+    }
+    
+    // Fetch disaster type counts
+    function fetchTypeCounts(params) {
+        fetch(`/api/explorer/type-counts?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                // Create disaster types chart
+                const types = data.map(item => item.disaster_type || item.disaster_group);
+                const counts = data.map(item => item.count);
+                
+                Plotly.newPlot('typesChart', [{
+                    labels: types,
+                    values: counts,
+                    type: 'pie',
+                    hole: 0.4,
+                    marker: {
+                        colors: [
+                            '#1a5f7a', '#e74c3c', '#f39c12', '#2ecc71', 
+                            '#3498db', '#9b59b6', '#34495e', '#16a085'
+                        ]
+                    },
+                    textinfo: 'label+percent',
+                    insidetextorientation: 'radial'
+                }], {
+                    margin: { t: 10, r: 10, l: 10, b: 10 }
+                });
+            })
+            .catch(error => console.error('Error fetching type counts:', error));
+    }
+    
+    // Fetch impact by disaster type
+    function fetchImpactByType(params) {
+        fetch(`/api/explorer/impact-by-type?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                // Create deaths by type chart
+                if (data.deaths && data.deaths.length > 0) {
+                    const deathsTypes = data.deaths.map(item => item.disaster_type || item.disaster_group);
+                    const deathsCounts = data.deaths.map(item => item.deaths);
+                    
+                    Plotly.newPlot('deathsByTypeChart', [{
+                        x: deathsTypes,
+                        y: deathsCounts,
+                        type: 'bar',
+                        marker: {
+                            color: '#e74c3c'
+                        }
+                    }], {
+                        title: 'Deaths by Disaster Type',
+                        margin: { t: 30, r: 10, l: 50, b: 100 },
+                        xaxis: {
+                            title: 'Disaster Type',
+                            tickangle: -45
+                        },
+                        yaxis: {
+                            title: 'Number of Deaths'
+                        }
+                    });
+                }
+                
+                // Create damages by type chart
+                if (data.damages && data.damages.length > 0) {
+                    const damagesTypes = data.damages.map(item => item.disaster_type || item.disaster_group);
+                    const damagesCounts = data.damages.map(item => item.total_damages);
+                    
+                    Plotly.newPlot('damagesByTypeChart', [{
+                        x: damagesTypes,
+                        y: damagesCounts,
+                        type: 'bar',
+                        marker: {
+                            color: '#f39c12'
+                        }
+                    }], {
+                        title: 'Economic Damages by Disaster Type ($M)',
+                        margin: { t: 30, r: 10, l: 50, b: 100 },
+                        xaxis: {
+                            title: 'Disaster Type',
+                            tickangle: -45
+                        },
+                        yaxis: {
+                            title: 'Economic Damages ($ millions)'
+                        }
+                    });
+                }
+            })
+            .catch(error => console.error('Error fetching impact by type:', error));
+    }
+</script>
+{% endblock %}

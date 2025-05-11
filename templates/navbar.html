@@ -1,0 +1,110 @@
+<nav class="bg-white shadow-md">
+    <div class="container mx-auto px-4">
+        <div class="flex justify-between items-center py-4">
+            <div class="flex items-center">
+                <a href="{{ url_for('dashboard') }}" class="flex items-center">
+                    <i class="fas fa-bolt text-secondary text-2xl mr-2"></i>
+                    <span class="font-bold text-xl text-primary">Doom Meter</span>
+                </a>
+                <div class="hidden md:flex items-center ml-10 space-x-6">
+                    <a href="{{ url_for('dashboard') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                        <i class="fas fa-chart-line mr-2"></i> Dashboard
+                    </a>
+                    <a href="{{ url_for('prediction') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                        <i class="fas fa-brain mr-2"></i> Prediction
+                    </a>
+                    <a href="{{ url_for('alerts') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                        <i class="fas fa-bell mr-2"></i> Alerts
+                    </a>
+                    <a href="{{ url_for('resources') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                        <i class="fas fa-box-open mr-2"></i> Resources
+                    </a>
+                    <a href="{{ url_for('evacuation') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                        <i class="fas fa-running mr-2"></i> Evacuation
+                    </a>
+                    <a href="{{ url_for('damage') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                        <i class="fas fa-house-damage mr-2"></i> Damage
+                    </a>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <button class="text-gray-500 hover:text-primary transition duration-300">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="absolute -top-1 -right-1 bg-secondary text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+                <div class="relative">
+                    <button id="userMenuButton" class="flex items-center text-gray-700 hover:text-primary transition duration-300">
+                        <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-2">
+                            <span class="text-sm font-medium">{{ current_user.username[0].upper() }}</span>
+                        </div>
+                        <span class="hidden md:block">{{ current_user.username }}</span>
+                        <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                    </button>
+                    <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                        <div class="border-t border-gray-100"></div>
+                        <a href="{{ url_for('logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                    </div>
+                </div>
+                <button id="mobileMenuButton" class="md:hidden text-gray-700 hover:text-primary transition duration-300">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+        &lt;!-- Mobile Menu -->
+        <div id="mobileMenu" class="hidden md:hidden py-4 border-t border-gray-100">
+            <div class="flex flex-col space-y-4">
+                <a href="{{ url_for('dashboard') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                    <i class="fas fa-chart-line mr-2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('prediction') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                    <i class="fas fa-brain mr-2"></i> Prediction
+                </a>
+                <a href="{{ url_for('alerts') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                    <i class="fas fa-bell mr-2"></i> Alerts
+                </a>
+                <a href="{{ url_for('resources') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                    <i class="fas fa-box-open mr-2"></i> Resources
+                </a>
+                <a href="{{ url_for('evacuation') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                    <i class="fas fa-running mr-2"></i> Evacuation
+                </a>
+                <a href="{{ url_for('damage') }}" class="text-gray-700 hover:text-primary transition duration-300 flex items-center">
+                    <i class="fas fa-house-damage mr-2"></i> Damage
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<script>
+    // Toggle user menu
+    const userMenuButton = document.getElementById('userMenuButton');
+    const userMenu = document.getElementById('userMenu');
+    
+    if (userMenuButton && userMenu) {
+        userMenuButton.addEventListener('click', () => {
+            userMenu.classList.toggle('hidden');
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
+                userMenu.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Toggle mobile menu
+    const mobileMenuButton = document.getElementById('mobileMenuButton');
+    const mobileMenu = document.getElementById('mobileMenu');
+    
+    if (mobileMenuButton && mobileMenu) {
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+    }
+</script>

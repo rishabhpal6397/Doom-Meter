@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Resources - Disaster Management System{% endblock %}
+{% block page_title %}Resource Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Current Resources</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Resource</th>
+                                <th>Available</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for resource, amount in resources.items() %}
+                                <tr>
+                                    <td>{{ resource }}</td>
+                                    <td>{{ amount }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <canvas id="resourcePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Update Resources</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('resources') }}">
+                    <input type="hidden" name="action" value="update">
+                    <div class="mb-3">
+                        <label for="resource_type" class="form-label">Resource Type</label>
+                        <select class="form-select" id="resource_type" name="resource_type" required>
+                            {% for resource in resources.keys() %}
+                                <option value="{{ resource }}">{{ resource }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="update_action" class="form-label">Action</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="update_action" id="action_add" value="add" checked>
+                            <label class="form-check-label" for="action_add">Add</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="update_action" id="action_remove" value="remove">
+                            <label class="form-check-label" for="action_remove">Remove</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="10" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Reason</label>
+                        <input type="text" class="form-control" id="reason" name="reason">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sync-alt"></i> Update Resource
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Resource Allocation</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('resources') }}">
+                    <input type="hidden" name="action" value="allocate">
+                    <div class="mb-3">
+                        <label for="allocation_resource" class="form-label">Resource to Allocate</label>
+                        <select class="form-select" id="allocation_resource" name="allocation_resource" required>
+                            {% for resource in resources.keys() %}
+                                <option value="{{ resource }}">{{ resource }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="allocation_quantity" class="form-label">Quantity to Allocate</label>
+                        <input type="number" class="form-control" id="allocation_quantity" name="allocation_quantity" min="1" value="5" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="allocation_location" class="form-label">Allocation Location</label>
+                        <input type="text" class="form-control" id="allocation_location" name="allocation_location" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="allocation_priority" class="form-label">Priority</label>
+                        <select class="form-select" id="allocation_priority" name="allocation_priority" required>
+                            <option value="High">High</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-truck"></i> Allocate Resources
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Recent Allocations</h5>
+            </div>
+            <div class="card-body">
+                {% if allocations %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Resource</th>
+                                    <th>Quantity</th>
+                                    <th>Location</th>
+                                    <th>Priority</th>
+                                    <th>Date</th>
+                                    <th>Allocated By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for allocation in allocations %}
+                                    <tr>
+                                        <td>{{ allocation.resource }}</td>
+                                        <td>{{ allocation.quantity }}</td>
+                                        <td>{{ allocation.location }}</td>
+                                        <td>
+                                            {% if allocation.priority == 'High' %}
+                                                <span class="badge bg-danger">High</span>
+                                            {% elif allocation.priority == 'Medium' %}
+                                                <span class="badge bg-warning">Medium</span>
+                                            {% else %}
+                                                <span class="badge bg-info">Low</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ allocation.date }}</td>
+                                        <td>{{ allocation.allocated_by }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center">No recent allocations.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Resource pie chart
+    var resourcePieCtx = document.getElementById('resourcePieChart').getContext('2d');
+    var resourcePieChart = new Chart(resourcePieCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for resource in resources.keys() %}'{{ resource }}',{% endfor %}],
+            datasets: [{
+                data: [{% for amount in resources.values() %}{{ amount }},{% endfor %}],
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Doom Meter{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-body bg-primary bg-gradient text-white rounded-lg">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Total Disasters</h6>
+                        <h2 class="mb-0 display-6">{{ total_disasters }}</h2>
+                    </div>
+                    <i class="fas fa-globe fa-3x opacity-50"></i>
+                </div>
+                <small>Last 12 months</small>
+                <div class="progress mt-2 bg-light bg-opacity-25">
+                    <div class="progress-bar bg-white" role="progressbar" style="width: 75%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-body bg-danger bg-gradient text-white rounded-lg">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Affected Population</h6>
+                        <h2 class="mb-0 display-6">{{ affected_population }}</h2>
+                    </div>
+                    <i class="fas fa-users fa-3x opacity-50"></i>
+                </div>
+                <small>Last 12 months</small>
+                <div class="progress mt-2 bg-light bg-opacity-25">
+                    <div class="progress-bar bg-white" role="progressbar" style="width: 60%" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-body bg-warning bg-gradient text-white rounded-lg">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Economic Impact</h6>
+                        <h2 class="mb-0 display-6">${{ economic_damage }}B</h2>
+                    </div>
+                    <i class="fas fa-dollar-sign fa-3x opacity-50"></i>
+                </div>
+                <small>Last 12 months</small>
+                <div class="progress mt-2 bg-light bg-opacity-25">
+                    <div class="progress-bar bg-white" role="progressbar" style="width: 85%" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-body bg-info bg-gradient text-white rounded-lg">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">High Risk Regions</h6>
+                        <h2 class="mb-0 display-6">{{ high_risk_regions }}</h2>
+                    </div>
+                    <i class="fas fa-map-marker-alt fa-3x opacity-50"></i>
+                </div>
+                <small>Last 12 months</small>
+                <div class="progress mt-2 bg-light bg-opacity-25">
+                    <div class="progress-bar bg-white" role="progressbar" style="width: 70%" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Global Disaster Map (Last 5 Years)</h5>
+            </div>
+            <div class="card-body">
+                <div id="map" style="height: 450px;" class="rounded"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-lg h-100">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Active Alerts</h5>
+            </div>
+            <div class="card-body">
+                {% if alerts %}
+                    <div class="alert-list">
+                        {% for alert in alerts %}
+                            <div class="alert alert-{{ 'danger' if alert.severity > 3 else 'warning' }} mb-3 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ alert.type }}</strong> - {{ alert.location }}
+                                        <br>
+                                        <small>{{ alert.time }}</small>
+                                    </div>
+                                    <span class="badge bg-{{ 'danger' if alert.severity > 3 else 'warning' }} rounded-pill">
+                                        Level {{ alert.severity }}
+                                    </span>
+                                </div>
+                                {% if alert.description %}
+                                    <hr>
+                                    <small>{{ alert.description }}</small>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <p>No active alerts at this time.</p>
+                    </div>
+                {% endif %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('alerts') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-bell"></i> View All Alerts
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Resource Overview</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="resourceChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Disaster Trends</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" id="yearlyBtn">Yearly</button>
+                    <button type="button" class="btn btn-outline-secondary" id="typeBtn">By Type</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="disasterTrendsChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Recent Disaster Events</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Location</th>
+                                <th>Date</th>
+                                <th>Magnitude</th>
+                                <th>Deaths</th>
+                                <th>Economic Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for disaster in recent_disasters %}
+                                <tr>
+                                    <td>
+                                        <span class="badge rounded-pill bg-{{ 'danger' if 'Earthquake' in disaster.name or 'Tsunami' in disaster.name else 'primary' if 'Flood' in disaster.name else 'warning' if 'Storm' in disaster.name or 'Hurricane' in disaster.name else 'success' if 'Drought' in disaster.name else 'info' }}">
+                                            {{ disaster.name }}
+                                        </span>
+                                    </td>
+                                    <td>{{ disaster.location }}</td>
+                                    <td>{{ disaster.date }}</td>
+                                    <td>{{ disaster.magnitude if disaster.magnitude is defined else "N/A" }}</td>
+                                    <td>{{ disaster.deaths if disaster.deaths is defined else "N/A" }}</td>
+                                    <td>${{ disaster.economic_impact if disaster.economic_impact is defined else "N/A" }}M</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Regional Risk Assessment</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Region</th>
+                                <th>Risk Level</th>
+                                <th>Primary Threat</th>
+                                <th>Population</th>
+                                <th>Economic Vulnerability</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for region in risk_assessment %}
+                                <tr>
+                                    <td>{{ region.name }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ region.risk_color }}">{{ region.risk_level }}</span>
+                                    </td>
+                                    <td>{{ region.primary_threat }}</td>
+                                    <td>{{ region.population }}</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-{{ region.econ_color }}" role="progressbar" style="width: {{ region.econ_vulnerability }}%" aria-valuenow="{{ region.econ_vulnerability }}" aria-valuemin="0" aria-valuemax="100">{{ region.econ_vulnerability }}%</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary">Details</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize map
+var map = L.map('map').setView([20, 0], 2);
+
+// Add tile layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+// Add disaster markers
+var mapData = {{ map_data|safe }};
+
+mapData.forEach(function(disaster) {
+    var color = 'blue';
+    var disasterType = disaster.disaster_group || disaster.disaster_type;
+    
+    if (disasterType.includes('Geophysical') || disasterType.includes('Earthquake')) {
+        color = 'red';
+    } else if (disasterType.includes('Meteorological') || disasterType.includes('Storm')) {
+        color = 'blue';
+    } else if (disasterType.includes('Hydrological') || disasterType.includes('Flood')) {
+        color = 'darkblue';
+    } else if (disasterType.includes('Climatological') || disasterType.includes('Wildfire')) {
+        color = 'orange';
+    } else if (disasterType.includes('Biological')) {
+        color = 'green';
+    }
+    
+    var popupContent = '<b>' + disasterType + '</b><br>' +
+                      'Location: ' + disaster.country + '<br>' +
+                      'Date: ' + disaster.start_date + '<br>' +
+                      'Magnitude: ' + disaster.magnitude + '<br>' +
+                      'Deaths: ' + disaster.deaths + '<br>' +
+                      'Damages: $' + disaster.total_damages + ' million';
+    
+    L.circleMarker([disaster.latitude, disaster.longitude], {
+        radius: 5,
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.7
+    }).bindPopup(popupContent).addTo(map);
+});
+
+// Resource chart
+var resourceCtx = document.getElementById('resourceChart').getContext('2d');
+var resourceChart = new Chart(resourceCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for resource, amount in resources.items() %}'{{ resource }}',{% endfor %}],
+        datasets: [{
+            label: 'Available Resources',
+            data: [{% for resource, amount in resources.items() %}{{ amount }},{% endfor %}],
+            backgroundColor: [
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)'
+            ],
+            borderColor: [
+                'rgba(75, 192, 192, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Disaster trends chart
+var trendsCtx = document.getElementById('disasterTrendsChart').getContext('2d');
+var yearlyData = {{ yearly_disasters|safe }};
+
+var trendsChart = new Chart(trendsCtx, {
+    type: 'line',
+    data: {
+        labels: yearlyData.map(item => item.year),
+        datasets: [{
+            label: 'Number of Disasters',
+            data: yearlyData.map(item => item.count),
+            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Toggle between yearly and type views
+document.getElementById('yearlyBtn').addEventListener('click', function() {
+    this.classList.add('active');
+    document.getElementById('typeBtn').classList.remove('active');
+    
+    trendsChart.data.labels = yearlyData.map(item => item.year);
+    trendsChart.data.datasets = [{
+        label: 'Number of Disasters',
+        data: yearlyData.map(item => item.count),
+        borderColor: 'rgba(54, 162, 235, 1)',
+        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4
+    }];
+    
+    trendsChart.update();
+});
+
+document.getElementById('typeBtn').addEventListener('click', function() {
+    this.classList.add('active');
+    document.getElementById('yearlyBtn').classList.remove('active');
+    
+    // This would be replaced with actual data in a real implementation
+    var typeData = [
+        {type: 'Earthquake', count: 120},
+        {type: 'Flood', count: 250},
+        {type: 'Hurricane', count: 180},
+        {type: 'Drought', count: 90},
+        {type: 'Wildfire', count: 150}
+    ];
+    
+    trendsChart.data.labels = typeData.map(item => item.type);
+    trendsChart.data.datasets = [{
+        label: 'Number of Disasters',
+        data: typeData.map(item => item.count),
+        backgroundColor: [
+            'rgba(220, 53, 69, 0.7)',
+            'rgba(54, 162, 235, 0.7)',
+            'rgba(255, 193, 7, 0.7)',
+            'rgba(40, 167, 69, 0.7)',
+            'rgba(255, 159, 64, 0.7)'
+        ],
+        borderColor: [
+            'rgba(220, 53, 69, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 193, 7, 1)',
+            'rgba(40, 167, 69, 1)',
+            'rgba(255, 159, 64, 1)'
+        ],
+        borderWidth: 1
+    }];
+    
+    trendsChart.type = 'bar';
+    trendsChart.update();
+});
+</script>
+{% endblock %}

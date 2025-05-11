@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction - Doom Meter{% endblock %}
+{% block page_title %}Disaster Impact Prediction{% endblock %}
+
+{% block extra_css %}
+<style>
+    .prediction-card {
+        transition: all 0.3s ease;
+    }
+    
+    .prediction-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .impact-meter {
+        height: 10px;
+        border-radius: 5px;
+        background: linear-gradient(to right, #28a745, #ffc107, #dc3545);
+        position: relative;
+    }
+    
+    .impact-indicator {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background-color: #343a40;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        top: -1px;
+        transform: translateX(-50%);
+        box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+    
+    .sector-impact {
+        height: 8px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+    }
+    
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255,255,255,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        border-radius: 0.5rem;
+    }
+    
+    .spinner {
+        width: 3rem;
+        height: 3rem;
+    }
+    
+    .prediction-form label {
+        font-weight: 500;
+    }
+    
+    .result-card {
+        border-left: 4px solid;
+    }
+    
+    .high-impact {
+        border-color: #dc3545;
+    }
+    
+    .medium-impact {
+        border-color: #ffc107;
+    }
+    
+    .low-impact {
+        border-color: #28a745;
+    }
+    
+    .density-info {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .region-selector {
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-body">
+                <h5 class="card-title mb-4">
+                    <i class="fas fa-brain text-primary me-2"></i>
+                    Disaster Impact Prediction Model
+                </h5>
+                <p class="text-muted">
+                    Our advanced prediction model uses historical disaster data and machine learning to forecast potential impacts of disasters. 
+                    Enter the parameters below to generate a prediction.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-lg mb-4 prediction-card">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Prediction Parameters</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('prediction') }}" class="prediction-form" id="predictionForm">
+                    <div class="mb-3 region-selector">
+                        <label for="pred_region" class="form-label">Region</label>
+                        <select class="form-select" id="pred_region" name="pred_region" required onchange="updateCountryOptions()">
+                            <option value="" selected disabled>Select a region</option>
+                            <option value="Africa">Africa</option>
+                            <option value="Americas">Americas</option>
+                            <option value="Asia">Asia</option>
+                            <option value="Europe">Europe</option>
+                            <option value="Oceania">Oceania</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="pred_country" class="form-label">Country</label>
+                        <select class="form-select" id="pred_country" name="pred_country" required onchange="updateStateOptions()">
+                            <option value="" selected disabled>Select a country</option>
+                            <!-- Countries will be populated based on selected region -->
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="pred_state" class="form-label">State/Province</label>
+                        <select class="form-select" id="pred_state" name="pred_state">
+                            <option value="" selected disabled>Select a state/province</option>
+                            <!-- States will be populated based on selected country -->
+                        </select>
+                        <small class="text-muted">Optional for some countries</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="pred_disaster_type" class="form-label">Disaster Type</label>
+                        <select class="form-select" id="pred_disaster_type" name="pred_disaster_type" required>
+                            {% for type in disaster_types %}
+                                <option value="{{ type }}">{{ type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="pred_magnitude" class="form-label">Magnitude</label>
+                        <input type="range" class="form-range" min="1" max="10" step="0.1" id="pred_magnitude" name="pred_magnitude" value="5.0" oninput="document.getElementById('magnitude_value').textContent = this.value">
+                        <div class="d-flex justify-content-between">
+                            <span>Low (1.0)</span>
+                            <span id="magnitude_value">5.0</span>
+                            <span>High (10.0)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="pred_year" class="form-label">Year</label>
+                        <input type="number" class="form-control" id="pred_year" name="pred_year" min="2023" max="2050" value="{{ current_year }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="pred_population_density" class="form-label">Population Density</label>
+                        <select class="form-select" id="pred_population_density" name="pred_population_density">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                            <option value="Very High">Very High</option>
+                        </select>
+                        <div class="density-info">
+                            <strong>Ranges:</strong><br>
+                            Low: &lt;50 people per km²<br>
+                            Medium: 50-200 people per km²<br>
+                            High: 200-500 people per km²<br>
+                            Very High: &gt;500 people per km²
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" id="predictBtn">
+                            <i class="fas fa-calculator me-2"></i> Generate Prediction
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        {% if prediction %}
+            <div class="card border-0 shadow-sm rounded-lg mb-4 result-card {{ 'high-impact' if prediction.impact_score > 70 else 'medium-impact' if prediction.impact_score > 40 else 'low-impact' }}">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Prediction Results</h5>
+                    <a href="{{ url_for('download_prediction', prediction_id=prediction.prediction_id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download me-1"></i> Download Report
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light border-0">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-1">Impact Score</h6>
+                                    <h1 class="display-4 fw-bold mb-0 {{ 'text-danger' if prediction.impact_score > 70 else 'text-warning' if prediction.impact_score > 40 else 'text-success' }}">
+                                        {{ prediction.impact_score }}
+                                    </h1>
+                                    <p class="text-muted">out of 100</p>
+                                    
+                                    <div class="impact-meter mt-3 mb-1">
+                                        <div class="impact-indicator" style="left: {{ prediction.impact_score }}%;"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <small>Low</small>
+                                        <small>Medium</small>
+                                        <small>High</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0">
+                                <div class="card-body">
+                                    <h6 class="mb-3">Disaster Type: <span class="fw-normal">{{ prediction.disaster_type }}</span></h6>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Casualties</span>
+                                            <span class="text-{{ 'danger' if prediction.high_casualties else 'dark' }}">{{ prediction.casualties_low }} - {{ prediction.casualties_high }}</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-{{ 'danger' if prediction.high_casualties else 'primary' }}" role="progressbar" style="width: {{ (prediction.casualties / 1000) * 100 }}%" aria-valuenow="{{ prediction.casualties }}" aria-valuemin="0" aria-valuemax="1000"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Economic Damage</span>
+                                            <span class="text-{{ 'danger' if prediction.high_damage else 'dark' }}">${{ prediction.economic_damage_low }} - ${{ prediction.economic_damage_high }}M</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-{{ 'danger' if prediction.high_damage else 'primary' }}" role="progressbar" style="width: {{ (prediction.economic_damage / 1000) * 100 }}%" aria-valuenow="{{ prediction.economic_damage }}" aria-valuemin="0" aria-valuemax="1000"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-header bg-white">
+                                    <h6 class="card-title mb-0">Recovery & Impact Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Recovery Time</span>
+                                            <span>{{ prediction.recovery_time_min }} - {{ prediction.recovery_time_max }} months</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-info" role="progressbar" style="width: {{ (prediction.recovery_time_max / 24) * 100 }}%" aria-valuenow="{{ prediction.recovery_time_max }}" aria-valuemin="0" aria-valuemax="24"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Population Affected</span>
+                                            <span>{{ prediction.affected_min }} - {{ prediction.affected_max }} people</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ (prediction.affected_max / 100000) * 100 }}%" aria-valuenow="{{ prediction.affected_max }}" aria-valuemin="0" aria-valuemax="100000"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Infrastructure Damage</span>
+                                            <span>{{ prediction.infrastructure_damage }}%</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ prediction.infrastructure_damage }}%" aria-valuenow="{{ prediction.infrastructure_damage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-header bg-white">
+                                    <h6 class="card-title mb-0">Sector Impact Breakdown</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Housing</span>
+                                            <span>{{ prediction.sector_impact.housing }}%</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ prediction.sector_impact.housing }}%" aria-valuenow="{{ prediction.sector_impact.housing }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Infrastructure</span>
+                                            <span>{{ prediction.sector_impact.infrastructure }}%</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ prediction.sector_impact.infrastructure }}%" aria-valuenow="{{ prediction.sector_impact.infrastructure }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Economic</span>
+                                            <span>{{ prediction.sector_impact.economic }}%</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ prediction.sector_impact.economic }}%" aria-valuenow="{{ prediction.sector_impact.economic }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Health</span>
+                                            <span>{{ prediction.sector_impact.health }}%</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-info" role="progressbar" style="width: {{ prediction.sector_impact.health }}%" aria-valuenow="{{ prediction.sector_impact.health }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Environment</span>
+                                            <span>{{ prediction.sector_impact.environment }}%</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ prediction.sector_impact.environment }}%" aria-valuenow="{{ prediction.sector_impact.environment }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="card border-0 shadow-sm rounded-lg mb-4">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+                    <h4>No Prediction Results Yet</h4>
+                    <p class="text-muted">Enter parameters and click "Generate Prediction" to see disaster impact analysis.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('predictionForm').addEventListener('submit', function() {
+        document.getElementById('predictBtn').disabled = true;
+        document.getElementById('predictBtn').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+    });
+    
+    // Region-Country-State data
+    const regionData = {
+        'Africa': {
+            'Nigeria': ['Lagos', 'Kano', 'Abuja', 'Rivers'],
+            'South Africa': ['Gauteng', 'Western Cape', 'KwaZulu-Natal', 'Eastern Cape'],
+            'Egypt': ['Cairo', 'Alexandria', 'Giza', 'Luxor'],
+            'Kenya': ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru'],
+            'Ethiopia': ['Addis Ababa', 'Dire Dawa', 'Mekelle', 'Gondar']
+        },
+        'Americas': {
+            'United States': ['California', 'Texas', 'Florida', 'New York', 'Illinois'],
+            'Canada': ['Ontario', 'Quebec', 'British Columbia', 'Alberta'],
+            'Brazil': ['São Paulo', 'Rio de Janeiro', 'Minas Gerais', 'Bahia'],
+            'Mexico': ['Mexico City', 'Jalisco', 'Nuevo León', 'Veracruz'],
+            'Argentina': ['Buenos Aires', 'Córdoba', 'Santa Fe', 'Mendoza']
+        },
+        'Asia': {
+            'China': ['Beijing', 'Shanghai', 'Guangdong', 'Sichuan'],
+            'India': ['Maharashtra', 'Uttar Pradesh', 'Tamil Nadu', 'Karnataka'],
+            'Japan': ['Tokyo', 'Osaka', 'Kanagawa', 'Aichi'],
+            'Indonesia': ['Jakarta', 'West Java', 'East Java', 'Central Java'],
+            'Pakistan': ['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan']
+        },
+        'Europe': {
+            'Germany': ['North Rhine-Westphalia', 'Bavaria', 'Baden-Württemberg', 'Lower Saxony'],
+            'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
+            'France': ['Île-de-France', 'Auvergne-Rhône-Alpes', 'Nouvelle-Aquitaine', 'Occitanie'],
+            'Italy': ['Lombardy', 'Lazio', 'Campania', 'Sicily'],
+            'Spain': ['Madrid', 'Catalonia', 'Andalusia', 'Valencia']
+        },
+        'Oceania': {
+            'Australia': ['New South Wales', 'Victoria', 'Queensland', 'Western Australia'],
+            'New Zealand': ['Auckland', 'Canterbury', 'Wellington', 'Waikato'],
+            'Papua New Guinea': ['National Capital', 'Morobe', 'East New Britain', 'Madang'],
+            'Fiji': ['Central', 'Western', 'Northern', 'Eastern'],
+            'Solomon Islands': ['Guadalcanal', 'Malaita', 'Western', 'Central']
+        }
+    };
+    
+    // Update country options based on selected region
+    function updateCountryOptions() {
+        const regionSelect = document.getElementById('pred_region');
+        const countrySelect = document.getElementById('pred_country');
+        const stateSelect = document.getElementById('pred_state');
+        
+        // Clear existing options
+        countrySelect.innerHTML = '<option value="" selected disabled>Select a country</option>';
+        stateSelect.innerHTML = '<option value="" selected disabled>Select a state/province</option>';
+        
+        const selectedRegion = regionSelect.value;
+        if (selectedRegion && regionData[selectedRegion]) {
+            const countries = Object.keys(regionData[selectedRegion]);
+            
+            // Add country options
+            countries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country;
+                option.textContent = country;
+                countrySelect.appendChild(option);
+            });
+        }
+    }
+    
+    // Update state options based on selected country
+    function updateStateOptions() {
+        const regionSelect = document.getElementById('pred_region');
+        const countrySelect = document.getElementById('pred_country');
+        const stateSelect = document.getElementById('pred_state');
+        
+        // Clear existing options
+        stateSelect.innerHTML = '<option value="" selected disabled>Select a state/province</option>';
+        
+        const selectedRegion = regionSelect.value;
+        const selectedCountry = countrySelect.value;
+        
+        if (selectedRegion && selectedCountry && 
+            regionData[selectedRegion] && 
+            regionData[selectedRegion][selectedCountry]) {
+            
+            const states = regionData[selectedRegion][selectedCountry];
+            
+            // Add state options
+            states.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state;
+                option.textContent = state;
+                stateSelect.appendChild(option);
+            });
+        }
+    }
+</script>
+{% endblock %}

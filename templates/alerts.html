@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Alerts - Doom Meter{% endblock %}
+{% block page_title %}Disaster Monitoring and Alerts{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm rounded-lg mb-4">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Create New Alert</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('alerts') }}">
+                    <div class="mb-3">
+                        <label for="alert_type" class="form-label">Disaster Type</label>
+                        <select class="form-select" id="alert_type" name="alert_type" required>
+                            <option value="Earthquake">Earthquake</option>
+                            <option value="Flood">Flood</option>
+                            <option value="Hurricane">Hurricane</option>
+                            <option value="Wildfire">Wildfire</option>
+                            <option value="Tsunami">Tsunami</option>
+                            <option value="Drought">Drought</option>
+                            <option value="Landslide">Landslide</option>
+                            <option value="Volcanic Eruption">Volcanic Eruption</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="alert_severity" class="form-label">Severity Level (1-5)</label>
+                        <input type="range" class="form-range" min="1" max="5" id="alert_severity" name="alert_severity" value="3" oninput="document.getElementById('severity_value').textContent = this.value">
+                        <div class="d-flex justify-content-between">
+                            <span>Low (1)</span>
+                            <span id="severity_value">3</span>
+                            <span>High (5)</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="alert_location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="alert_location" name="alert_location" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="alert_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="alert_description" name="alert_description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="alert_time" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="alert_time" name="alert_time" value="{{ now }}" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-bell me-2"></i> Issue Alert
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm rounded-lg mb-4">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Current Alerts</h5>
+            </div>
+            <div class="card-body">
+                {% if alerts %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Severity</th>
+                                    <th>Location</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alert in alerts %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge rounded-pill bg-{{ 'danger' if alert.type == 'Earthquake' or alert.type == 'Tsunami' else 'primary' if alert.type == 'Flood' else 'warning' if alert.type == 'Hurricane' or alert.type == 'Wildfire' else 'info' }}">
+                                                {{ alert.type }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% for i in range(1, 6) %}
+                                                {% if i <= alert.severity %}
+                                                    <i class="fas fa-circle text-danger"></i>
+                                                {% else %}
+                                                    <i class="far fa-circle text-secondary"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                        <td>{{ alert.location }}</td>
+                                        <td>{{ alert.time }}</td>
+                                        <td>
+                                            <a href="{{ url_for('delete_alert', alert_id=alert._id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to resolve this alert?')">
+                                                <i class="fas fa-check me-1"></i> Resolve
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <p>No active alerts at this time.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm rounded-lg">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Real-time Monitoring Feed</h5>
+            </div>
+            <div class="card-body">
+                <div class="monitoring-feed">
+                    <div class="feed-item d-flex mb-3">
+                        <div class="feed-time me-3 text-muted">
+                            <small>Just now</small>
+                        </div>
+                        <div class="feed-content">
+                            <span>System monitoring active. No immediate threats detected.</span>
+                        </div>
+                    </div>
+                    <div class="feed-item d-flex mb-3">
+                        <div class="feed-time me-3 text-muted">
+                            <small>5 minutes ago</small>
+                        </div>
+                        <div class="feed-content">
+                            <span>Weather systems normal in monitored regions.</span>
+                        </div>
+                    </div>
+                    <div class="feed-item d-flex mb-3">
+                        <div class="feed-time me-3 text-muted">
+                            <small>15 minutes ago</small>
+                        </div>
+                        <div class="feed-content">
+                            <span>Seismic activity detected in Pacific region - below alert threshold.</span>
+                        </div>
+                    </div>
+                    <div class="feed-item d-flex mb-3">
+                        <div class="feed-time me-3 text-muted">
+                            <small>1 hour ago</small>
+                        </div>
+                        <div class="feed-content">
+                            <span>All monitoring systems operational and reporting.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add real-time feed simulation
+    setInterval(function() {
+        const feedContainer = document.querySelector('.monitoring-feed');
+        const messages = [
+            "Satellite imagery analysis complete. No new disaster formations detected.",
+            "Weather forecast updated for monitored regions.",
+            "Seismic sensors reporting normal activity levels.",
+            "River water levels within normal parameters.",
+            "Wildfire risk assessment updated for Western regions."
+        ];
+        
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        
+        const newFeedItem = document.createElement('div');
+        newFeedItem.className = 'feed-item d-flex mb-3';
+        newFeedItem.innerHTML = `
+            <div class="feed-time me-3 text-muted">
+                <small>Just now</small>
+            </div>
+            <div class="feed-content">
+                <span>${randomMessage}</span>
+            </div>
+        `;
+        
+        // Add new item at the top
+        feedContainer.insertBefore(newFeedItem, feedContainer.firstChild);
+        
+        // Remove oldest item if more than 5
+        if (feedContainer.children.length > 5) {
+            feedContainer.removeChild(feedContainer.lastChild);
+        }
+        
+        // Update other times
+        const times = feedContainer.querySelectorAll('.feed-time small');
+        times[1].textContent = 'Just now';
+        times[2].textContent = '5 minutes ago';
+        times[3].textContent = '15 minutes ago';
+        times[4].textContent = '1 hour ago';
+    }, 30000); // Update every 30 seconds
+</script>
+{% endblock %}
