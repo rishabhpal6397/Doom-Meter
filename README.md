@@ -33,17 +33,3 @@ A Flask-based AI system that predicts the impact of disasters (fatalities, sever
 
 ---
 
-## 📂 Folder Structure (Example)
-
-```bash
-.
-├── app/                # Flask application code
-│   ├── static/          # CSS, JS, images
-│   ├── templates/       # HTML templates
-│   ├── models/          # Trained ML models
-│   ├── utils/           # Data processing & helper functions
-│   └── routes.py        # Flask routes
-├── data/               # Datasets
-├── notebooks/          # Model development notebooks
-├── requirements.txt    # Python dependencies
-└── README.md           # Project documentation
